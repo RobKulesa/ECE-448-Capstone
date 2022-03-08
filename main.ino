@@ -2,12 +2,12 @@
 #include <HardwareSerial.h>
 
 
-byte serveRequests = 0;
-byte impulsesLogged = 0;
-byte firstImpulse = 0;
-byte secondImpulse = 0;
-int firstTimeStamp = 0;
-int secondTimeStamp = 0;
+uint8_t serveRequests = 0;
+uint8_t impulsesLogged = 0;
+uint8_t firstImpulse = 0;
+uint8_t secondImpulse = 0;
+uint32_t firstTimeStamp = 0;
+uint32_t secondTimeStamp = 0;
 
 
 #define ISR_MACRO(pin) {\
@@ -27,7 +27,7 @@ int secondTimeStamp = 0;
 }
 
 // Define hardware connections
-const byte gatePins[] = {2, 3, 21};
+const uint8_t gatePins[] = {2, 3, 21};
 
 void soundISR0() {
   ISR_MACRO(gatePins[0]);
@@ -42,23 +42,42 @@ void soundISR2() {
 void logISR(byte pin) {
   int pin_val = digitalRead(pin);
   char buffer[12];
-  sprintf_s(buffer, 12, "Pin %d: %d", gatePins[0], pin_val);
+  sprintf(buffer, "Pin %d: %d", pin, pin_val);
   Serial.println(buffer);
 }
 
 void setup() {
   Serial.begin(9600);
-  for (byte i = 0; i < 3; i++) {
+  for (uint8_t i = 0; i < 3; i++) {
     pinMode(gatePins[i], INPUT);
   }
-  attachInterrupt(digitalPinToInterrupt(gatePins[0]), soundISR0, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(gatePins[1]), soundISR1, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(gatePins[2]), soundISR2, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(gatePins[0]), soundISR0, RISING);
+  attachInterrupt(digitalPinToInterrupt(gatePins[1]), soundISR1, RISING);
+  attachInterrupt(digitalPinToInterrupt(gatePins[2]), soundISR2, RISING);
   serveRequests = 1;
   Serial.println("Ready to serve requests");
 }
 
-void loop() {
-  Serial.println("Waiting for requests");
-  delay(1000);
+void loop() { 
+  while(impulsesLogged < 2) {
+    Serial.println("Waiting for requests");
+    delay(1000);
+  }
+  uint32_t timeDiff;
+  if(firstTimeStamp > secondTimeStamp) timeDiff = UINT32_MAX - firstTimeStamp + secondTimeStamp;
+  else timeDiff = secondTimeStamp - firstTimeStamp;
+
+  char buffer[33];
+  sprintf(buffer, "Time difference (us): %lu", timeDiff);
+  Serial.println(buffer);
+  clearLog();
+  serveRequests = 1;
+}
+
+void clearLog() {
+  impulsesLogged = 0;
+  firstImpulse = 0;
+  secondImpulse = 0;
+  firstTimeStamp = 0;
+  secondTimeStamp = 0;
 }
