@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-
+// Define global variables
 uint8_t serveRequests = 0;
 uint8_t impulsesLogged = 0;
 uint8_t firstImpulse = 0;
@@ -9,7 +9,7 @@ uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
 
-
+// Define macro function for updating global variables upon interrupt events
 #define ISR_MACRO(pin) {\
   if(serveRequests) {\
     if(impulsesLogged == 0) {\
@@ -26,9 +26,10 @@ uint32_t secondTimeStamp = 0;
   }\
 }
 
-// Define hardware connections
+// Define hardware-arduino connections
 const uint8_t gatePins[] = {2, 3, 21};
 
+// Interrupt Service Routines specific to the sound detector gate pins
 void soundISR0() {
   ISR_MACRO(gatePins[0]);
 }
@@ -39,6 +40,7 @@ void soundISR2() {
   ISR_MACRO(gatePins[2]);
 }
 
+// Print pin number and digital pin value to serial monitor upon interrupt
 void logISR(byte pin) {
   int pin_val = digitalRead(pin);
   char buffer[12];
@@ -46,6 +48,8 @@ void logISR(byte pin) {
   Serial.println(buffer);
 }
 
+// Set up the sound detector pins for input and attach respective ISRs upon digital rising edge
+// and begin serving requests for interrupts
 void setup() {
   Serial.begin(9600);
   for (uint8_t i = 0; i < 3; i++) {
@@ -58,6 +62,8 @@ void setup() {
   Serial.println("Ready to serve requests");
 }
 
+// When two impulses are logged, print the time difference between the first and second impulse
+// and reset the global variables
 void loop() { 
   while(impulsesLogged < 2) {
     Serial.println("Waiting for requests");
