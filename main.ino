@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
+#include <Math.h>
+
 
 // Define global variables
 uint8_t serveRequests = 0;
@@ -8,6 +10,8 @@ uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
+const uint8_t micDistance = 5; //inches
+const double speedOfSound = 0.0135039; //inches per microsecond
 
 // Define macro function for updating global variables upon interrupt events
 #define ISR_MACRO(pin) {\
@@ -43,9 +47,9 @@ void soundISR2() {
 // Print pin number and digital pin value to serial monitor upon interrupt
 void logISR(byte pin) {
   int pin_val = digitalRead(pin);
-  char buffer[12];
-  sprintf(buffer, "Pin %d: %d", pin, pin_val);
-  Serial.println(buffer);
+//  char buffer[12];
+//  sprintf(buffer, "Pin %d: %d", pin, pin_val);
+//  Serial.println(buffer);
 }
 
 // Set up the sound detector pins for input and attach respective ISRs upon digital rising edge
@@ -73,9 +77,11 @@ void loop() {
   if(firstTimeStamp > secondTimeStamp) timeDiff = UINT32_MAX - firstTimeStamp + secondTimeStamp;
   else timeDiff = secondTimeStamp - firstTimeStamp;
 
-  char buffer[33];
-  sprintf(buffer, "Time difference (us): %lu", timeDiff);
+  uint8_t theta = (180/M_PI) * asin((timeDiff * speedOfSound) / micDistance);
+  char buffer[150];
+  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta);
   Serial.println(buffer);
+  
   clearLog();
   serveRequests = 1;
 }
