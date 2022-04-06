@@ -10,7 +10,7 @@ uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
-const uint8_t micDistance = 5; //inches
+const uint8_t micDistance = 15; //inches
 const double speedOfSound = 0.0135039; //inches per microsecond
 
 // Define macro function for updating global variables upon interrupt events
@@ -31,7 +31,7 @@ const double speedOfSound = 0.0135039; //inches per microsecond
 }
 
 // Define hardware-arduino connections
-const uint8_t gatePins[] = {2, 3, 21};
+const uint8_t gatePins[] = {3, 18, 21};
 
 // Interrupt Service Routines specific to the sound detector gate pins
 void soundISR0() {
@@ -79,7 +79,8 @@ void loop() {
 
   uint8_t theta = (180/M_PI) * asin((timeDiff * speedOfSound) / micDistance);
   char buffer[150];
-  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta);
+  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu", firstImpulse, secondImpulse, timeDiff);
+//  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta);
   Serial.println(buffer);
   
   clearLog();
