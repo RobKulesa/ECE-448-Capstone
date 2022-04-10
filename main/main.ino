@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <Math.h>
-
+#include <Servo.h>
 
 // Define global variables
 uint8_t serveRequests = 0;
@@ -10,8 +10,9 @@ uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
-const uint8_t micDistance = 15; //inches
+const double micDistance = 15; //inches
 const double speedOfSound = 0.0135039; //inches per microsecond
+Servo servo;
 
 // Define macro function for updating global variables upon interrupt events
 #define ISR_MACRO(pin) {\
@@ -32,6 +33,7 @@ const double speedOfSound = 0.0135039; //inches per microsecond
 
 // Define hardware-arduino connections
 const uint8_t gatePins[] = {3, 18, 21};
+const uint8_t servoPin = 23;
 
 // Interrupt Service Routines specific to the sound detector gate pins
 void soundISR0() {
@@ -62,6 +64,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gatePins[0]), soundISR0, RISING);
   attachInterrupt(digitalPinToInterrupt(gatePins[1]), soundISR1, RISING);
   attachInterrupt(digitalPinToInterrupt(gatePins[2]), soundISR2, RISING);
+  servo.attach(servoPin);
   serveRequests = 1;
   Serial.println("Ready to serve requests");
 }
@@ -77,12 +80,16 @@ void loop() {
   if(firstTimeStamp > secondTimeStamp) timeDiff = UINT32_MAX - firstTimeStamp + secondTimeStamp;
   else timeDiff = secondTimeStamp - firstTimeStamp;
 
-  uint8_t theta = (180/M_PI) * asin((timeDiff * speedOfSound) / micDistance);
-  char buffer[150];
-  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu", firstImpulse, secondImpulse, timeDiff);
-//  sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta);
-  Serial.println(buffer);
-  
+  double ratio = (timeDiff * speedOfSound) / micDistance;
+  if(ratio <= 1) {
+    uint16_t theta_rel = (180/M_PI) * asin(ratio);
+    uint16_t theta_abs = angleOffset(theta_rel);
+    char buffer[150];
+    sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta_abs);
+    Serial.println(buffer);
+    servo.write(theta_abs / 2);
+    delay(2000);
+  }
   clearLog();
   serveRequests = 1;
 }
@@ -93,4 +100,20 @@ void clearLog() {
   secondImpulse = 0;
   firstTimeStamp = 0;
   secondTimeStamp = 0;
+}
+
+uint16_t angleOffset(uint16_t theta_rel) {
+  if(firstImpulse == gatePins[0] && secondImpulse == gatePins[1]) {
+    return 60 - theta_rel;
+  } else if(firstImpulse == gatePins[1] && secondImpulse == gatePins[0]) {
+    return 60 + theta_rel;
+  } else if(firstImpulse == gatePins[1] && secondImpulse == gatePins[2]) {
+    return 180 - theta_rel;
+  } else if(firstImpulse == gatePins[2] && secondImpulse == gatePins[1]) {
+    return 180 + theta_rel;
+  } else if(firstImpulse == gatePins[2] && secondImpulse == gatePins[0]) {
+    return 300 - theta_rel;
+  } else { //firstImpulse == gatePins[0] && secondImpulse == gatePins[2]
+    return 300 + theta_rel;
+  }
 }
