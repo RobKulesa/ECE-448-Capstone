@@ -5,7 +5,6 @@
 
 // Define global variables
 uint8_t serveRequests = 0;
-uint8_t impulsesLogged = 0;
 uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
@@ -17,15 +16,13 @@ Servo servo;
 // Define macro function for updating global variables upon interrupt events
 #define ISR_MACRO(pin) {\
   if(serveRequests) {\
-    if(impulsesLogged == 0) {\
+    if(firstImpulse == 0) {\
       firstTimeStamp = micros();\
       firstImpulse = pin;\
-      impulsesLogged += 1;\
-    } else if(impulsesLogged == 1) {\
+    } else if(secondImpulse == 0) {\
       serveRequests = 0;\
       secondTimeStamp = micros();\
       secondImpulse = pin;\
-      impulsesLogged += 1;\
     }\
     logISR(pin);\
   }\
@@ -72,7 +69,7 @@ void setup() {
 // When two impulses are logged, print the time difference between the first and second impulse
 // and reset the global variables
 void loop() { 
-  while(impulsesLogged < 2) {
+  while(secondImpulse == 0) {
     Serial.println("Waiting for requests");
     delay(1000);
   }
@@ -95,7 +92,6 @@ void loop() {
 }
 
 void clearLog() {
-  impulsesLogged = 0;
   firstImpulse = 0;
   secondImpulse = 0;
   firstTimeStamp = 0;
