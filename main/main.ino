@@ -4,32 +4,29 @@
 #include <Servo.h>
 
 // Define global variables
-uint8_t serveRequests = 0;
 uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
+uint8_t pos = 0;
 const double micDistance = 15; //inches
-const double speedOfSound = 0.0135039; //inches per microsecond
+const double speedOfSound = 0.0130; //inches per microsecond
 Servo servo;
 
 // Define macro function for updating global variables upon interrupt events
 #define ISR_MACRO(pin) {\
-  if(serveRequests) {\
-    if(firstImpulse == 0) {\
-      firstTimeStamp = micros();\
-      firstImpulse = pin;\
-    } else if(secondImpulse == 0) {\
-      serveRequests = 0;\
-      secondTimeStamp = micros();\
-      secondImpulse = pin;\
-    }\
-    logISR(pin);\
+  if(firstImpulse == 0) {\
+    firstTimeStamp = micros();\
+    firstImpulse = pin;\
+  } else if(secondImpulse == 0) {\
+    noInterrupts();\
+    secondTimeStamp = micros();\
+    secondImpulse = pin;\
   }\
 }
 
 // Define hardware-arduino connections
-const uint8_t gatePins[] = {3, 18, 21};
+const uint8_t gatePins[] = {21, 3, 18};
 const uint8_t servoPin = 23;
 
 // Interrupt Service Routines specific to the sound detector gate pins
@@ -43,14 +40,6 @@ void soundISR2() {
   ISR_MACRO(gatePins[2]);
 }
 
-// Print pin number and digital pin value to serial monitor upon interrupt
-void logISR(byte pin) {
-  int pin_val = digitalRead(pin);
-//  char buffer[12];
-//  sprintf(buffer, "Pin %d: %d", pin, pin_val);
-//  Serial.println(buffer);
-}
-
 // Set up the sound detector pins for input and attach respective ISRs upon digital rising edge
 // and begin serving requests for interrupts
 void setup() {
@@ -62,7 +51,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gatePins[1]), soundISR1, RISING);
   attachInterrupt(digitalPinToInterrupt(gatePins[2]), soundISR2, RISING);
   servo.attach(servoPin);
-  serveRequests = 1;
+  interrupts();
   Serial.println("Ready to serve requests");
 }
 
@@ -70,7 +59,15 @@ void setup() {
 // and reset the global variables
 void loop() { 
   while(secondImpulse == 0) {
-    Serial.println("Waiting for requests");
+    // Serial.println("Waiting for requests");
+    for (pos = 0; pos <= 180; pos += 1) { 
+      servo.write(pos);              
+      delay(15);                       
+    }
+    for (pos = 180; pos >= 0; pos -= 1) { 
+      servo.write(pos);              
+      delay(15);                       
+    }
     delay(1000);
   }
   uint32_t timeDiff;
@@ -88,7 +85,8 @@ void loop() {
     delay(2000);
   }
   clearLog();
-  serveRequests = 1;
+  interrupts();
+  delay(5000);
 }
 
 void clearLog() {
