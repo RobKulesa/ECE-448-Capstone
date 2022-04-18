@@ -6,11 +6,12 @@
 // Define global variables
 uint8_t firstImpulse = 0;
 uint8_t secondImpulse = 0;
+uint8_t thirdImpulse = 0;
 uint32_t firstTimeStamp = 0;
 uint32_t secondTimeStamp = 0;
 uint8_t pos = 0;
 const double micDistance = 15; //inches
-const double speedOfSound = 0.0130; //inches per microsecond
+const double speedOfSound = 0.0133; //inches per microsecond
 Servo servo;
 
 // Define macro function for updating global variables upon interrupt events
@@ -27,7 +28,7 @@ Servo servo;
 
 // Define hardware-arduino connections
 const uint8_t gatePins[] = {21, 3, 18};
-const uint8_t servoPin = 23;
+const uint8_t servoPin = 13;
 
 // Interrupt Service Routines specific to the sound detector gate pins
 void soundISR0() {
@@ -53,21 +54,14 @@ void setup() {
   servo.attach(servoPin);
   interrupts();
   Serial.println("Ready to serve requests");
+  servo.write(0);
 }
 
 // When two impulses are logged, print the time difference between the first and second impulse
 // and reset the global variables
 void loop() { 
   while(secondImpulse == 0) {
-    // Serial.println("Waiting for requests");
-    for (pos = 0; pos <= 180; pos += 1) { 
-      servo.write(pos);              
-      delay(15);                       
-    }
-    for (pos = 180; pos >= 0; pos -= 1) { 
-      servo.write(pos);              
-      delay(15);                       
-    }
+    Serial.println("Waiting for requests");
     delay(1000);
   }
   uint32_t timeDiff;
@@ -81,12 +75,11 @@ void loop() {
     char buffer[150];
     sprintf(buffer, "Impulse 1: %hu\nImpulse 2: %hu\nTime difference (us): %lu\nTheta: %hu", firstImpulse, secondImpulse, timeDiff, theta_abs);
     Serial.println(buffer);
-    servo.write(theta_abs / 2);
+    writeServo(theta_abs / 2);
     delay(2000);
   }
   clearLog();
   interrupts();
-  delay(5000);
 }
 
 void clearLog() {
@@ -109,5 +102,11 @@ uint16_t angleOffset(uint16_t theta_rel) {
     return 300 - theta_rel;
   } else { //firstImpulse == gatePins[0] && secondImpulse == gatePins[2]
     return 300 + theta_rel;
+  }
+}
+
+void writeServo(uint16_t theta) {
+  if(labs(servo.read() - theta) > 5) {
+      servo.write(theta);
   }
 }
